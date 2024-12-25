@@ -5,18 +5,6 @@ import { RowDataPacket } from 'mysql2';
 import NextAuth from 'next-auth/next';
 import MySQLAdapter from '@/lib/mysqlAdapter';
 
-declare module 'next-auth' {
-  interface Session {
-    user: User;
-  }
-  interface User {
-    id: string;
-  }
-  interface JWT {
-    id: string;
-  }
-}
-
 interface UserRow extends RowDataPacket {
   id: string;
   name: string;
@@ -40,14 +28,20 @@ export const authOptions: NextAuthOptions = {
           name: '부자 정재연',
           email: 'hello@love.com',
           hashedPassword: '12345',
+          role: 'User',
         };
         if (!credentials) return null;
 
         if (credentials.email === hardcodedUser.email && credentials.password === hardcodedUser.hashedPassword) {
-          return hardcodedUser as User;
+          return {
+            id: hardcodedUser.id,
+            name: hardcodedUser.name,
+            email: hardcodedUser.email,
+            role: hardcodedUser.role,
+          };
         }
 
-        const [rows] = await pool.query<UserRow[]>('SELECT id, name, email FROM users WHERE email=?', [
+        const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, user_type FROM users WHERE email=?', [
           credentials.email,
         ]);
 
@@ -58,7 +52,8 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             name: user.name,
             email: user.email,
-          } as User;
+            role: user.user_type,
+          };
         } else {
           return null;
         }
@@ -68,18 +63,27 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
+  jwt: {
+    secret: process.env.JWT_SECRET,
+    maxAge: 30 * 24 * 60 * 60,
+  },
   callbacks: {
     async jwt({ token, user }) {
+      console.log('token', token);
+      console.log('user', user);
       if (user) {
         token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
+      console.log('@', session, token);
       if (token) {
         session.user = {
           ...(session.user || {}),
           id: token.id as string,
+          role: token.id as string,
         };
       }
       return session;

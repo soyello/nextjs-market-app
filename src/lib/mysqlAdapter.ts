@@ -7,6 +7,7 @@ interface UserRow extends RowDataPacket {
   name: string;
   email: string;
   image: string | null;
+  user_type: string;
 }
 
 interface SessionRow extends RowDataPacket {
@@ -22,6 +23,7 @@ function mapToAdapterUser(row: UserRow): AdapterUser {
     email: row.email,
     image: row.image ?? null,
     emailVerified: null,
+    role: row.user_type,
   };
 }
 
@@ -36,7 +38,9 @@ function mapToAdapterSession(row: SessionRow): AdapterSession {
 const MySQLAdapter = {
   async getUser(id: string): Promise<AdapterUser | null> {
     try {
-      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image FROM users WHERE id = ?', [id]);
+      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image, user_type FROM users WHERE id = ?', [
+        id,
+      ]);
       return rows?.[0] ? mapToAdapterUser(rows[0]) : null;
     } catch (error) {
       console.error('Error fetching user by ID:', error);
@@ -48,7 +52,9 @@ const MySQLAdapter = {
       throw new Error('Email must be provided');
     }
     try {
-      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image FROM users WHERE email=?', [email]);
+      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image, user_type FROM users WHERE email=?', [
+        email,
+      ]);
 
       if (!rows[0]) return null;
 
@@ -59,23 +65,22 @@ const MySQLAdapter = {
     }
   },
   async createUser(user: Omit<AdapterUser, 'id'>): Promise<AdapterUser> {
-    const { name, email, image, emailVerified } = user;
-    const [result] = await pool.query<ResultSetHeader>('INSERT INTO users (name, email, image) VALUES (?,?,?)', [
-      name,
-      email,
-      image,
-    ]);
-    return { id: result.insertId.toString(), name, email, image, emailVerified };
+    const { name, email, image, emailVerified, role } = user;
+    const [result] = await pool.query<ResultSetHeader>(
+      'INSERT INTO users (name, email, image, user_type) VALUES (?,?,?,?)',
+      [name, email, image, role]
+    );
+    return { id: result.insertId.toString(), name, email, image, emailVerified, role };
   },
   async updateUser(user: Partial<AdapterUser> & { id: string }): Promise<AdapterUser> {
-    const { id, name, email, image } = user;
+    const { id, name, email, image, role } = user;
 
     if (!id) {
       throw new Error('User Id is required for updating.');
     }
 
     try {
-      const updates = { name, email, image };
+      const updates = { name, email, image, role };
       const keys = Object.keys(updates).filter((key) => updates[key as keyof typeof updates] !== undefined);
 
       if (keys.length === 0) {
@@ -87,7 +92,7 @@ const MySQLAdapter = {
 
       await pool.query(`UPDATE users SET ${fields} WHERE id = ?`, [...values, id]);
 
-      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image FROM users WHERE id = ?', [id]);
+      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image, role FROM users WHERE id = ?', [id]);
 
       if (!rows[0]) {
         throw new Error(`User with Id: ${id} not found after update.`);
@@ -113,7 +118,8 @@ const MySQLAdapter = {
           u.id AS id,
           u.name AS name,
           u.eamil AS eamil,
-          u.image AS image
+          u.image AS image,
+          u.user_type AS role
         FROM sessions AS s
         LEFT JOIN users AS u ON s.user_id = u.id
         WHERE s.session_token = ?
