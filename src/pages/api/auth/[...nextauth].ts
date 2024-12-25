@@ -3,6 +3,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import pool from '../../../lib/db';
 import { RowDataPacket } from 'mysql2';
 import NextAuth from 'next-auth/next';
+import MySQLAdapter from '@/lib/mysqlAdapter';
 
 declare module 'next-auth' {
   interface Session {
@@ -25,6 +26,7 @@ interface UserRow extends RowDataPacket {
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  adapter: MySQLAdapter,
   providers: [
     CredentialsProvider({
       name: 'Credentials',

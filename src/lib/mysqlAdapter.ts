@@ -15,14 +15,13 @@ interface SessionRow extends RowDataPacket {
   expires: string;
 }
 
-type CustomAdapterUser = Omit<AdapterUser, 'emailVerified'>;
-
-function mapToAdapterUser(row: UserRow): CustomAdapterUser {
+function mapToAdapterUser(row: UserRow): AdapterUser {
   return {
     id: row.id,
     name: row.name,
     email: row.email,
     image: row.image ?? null,
+    emailVerified: null,
   };
 }
 
@@ -35,7 +34,7 @@ function mapToAdapterSession(row: SessionRow): AdapterSession {
 }
 
 const MySQLAdapter = {
-  async getUserById(id: string): Promise<CustomAdapterUser | null> {
+  async getUser(id: string): Promise<AdapterUser | null> {
     try {
       const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image FROM users WHERE id = ?', [id]);
       return rows?.[0] ? mapToAdapterUser(rows[0]) : null;
@@ -44,7 +43,7 @@ const MySQLAdapter = {
       throw new Error('Failed to fetch user');
     }
   },
-  async getUserByEmail(email: string): Promise<CustomAdapterUser | null> {
+  async getUserByEmail(email: string): Promise<AdapterUser | null> {
     if (!email) {
       throw new Error('Email must be provided');
     }
@@ -59,16 +58,16 @@ const MySQLAdapter = {
       throw new Error('Failed to fetch user by email');
     }
   },
-  async createUser(user: Omit<CustomAdapterUser, 'id'>): Promise<CustomAdapterUser> {
-    const { name, email, image } = user;
+  async createUser(user: Omit<AdapterUser, 'id'>): Promise<AdapterUser> {
+    const { name, email, image, emailVerified } = user;
     const [result] = await pool.query<ResultSetHeader>('INSERT INTO users (name, email, image) VALUES (?,?,?)', [
       name,
       email,
       image,
     ]);
-    return { id: result.insertId.toString(), name, email, image };
+    return { id: result.insertId.toString(), name, email, image, emailVerified };
   },
-  async updateUser(user: Partial<CustomAdapterUser> & { id: string }): Promise<CustomAdapterUser> {
+  async updateUser(user: Partial<AdapterUser> & { id: string }): Promise<AdapterUser> {
     const { id, name, email, image } = user;
 
     if (!id) {
@@ -103,7 +102,7 @@ const MySQLAdapter = {
   async deleteUser(id: string): Promise<void> {
     await pool.query('DELETE FROM users WHERE id =?', [id]);
   },
-  async getSessionAndUser(sessionToken: string): Promise<{ session: AdapterSession; user: CustomAdapterUser } | null> {
+  async getSessionAndUser(sessionToken: string): Promise<{ session: AdapterSession; user: AdapterUser } | null> {
     try {
       const [results] = await pool.query<(SessionRow & UserRow)[]>(
         `
