@@ -24,15 +24,22 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials) return null;
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Invalid credentials');
+        }
 
         const user = await MySQLAdapter.getUserByEmailWithPassword(credentials.email);
 
-        if (user && (await bcrypt.compare(credentials.password, user.hashed_password!))) {
+        const isCorrectPassword = await bcrypt.compare(credentials.password, user.hashed_password!);
+        if (!isCorrectPassword) {
+          throw new Error('Invalid credentials');
+        }
+
+        if (user && isCorrectPassword) {
           return {
             id: user.id,
-            name: user.name,
-            email: user.email,
+            name: user.name || '',
+            email: user.email || '',
             role: user.user_type,
           };
         } else {
