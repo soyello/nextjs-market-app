@@ -5,11 +5,21 @@ import ImageUpload from '@/components/ImageUpload';
 import Input from '@/components/Input';
 import { categories } from '@/components/categories/Categories';
 import CategoryInput from '@/components/categories/CategoryInput';
-import React, { useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
+import { KakaoContext } from '../_app';
+import dynamic from 'next/dynamic';
 
 const ProductUploadPage = () => {
+  const { isKakaoLoaded } = useContext(KakaoContext);
+  const [shouldRenderMap, setShouldRenderMap] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isKakaoLoaded) {
+      setShouldRenderMap(true);
+    }
+  }, [isKakaoLoaded]);
 
   const {
     register,
@@ -32,6 +42,13 @@ const ProductUploadPage = () => {
 
   const imageSrc = watch('imageSrc');
   const category = watch('category');
+
+  const latitude = watch('latitude');
+  const longitude = watch('longitude');
+
+  const KakaoMap = dynamic(() => import('../../components/KakaoMap'), {
+    ssr: false,
+  });
 
   const onSubmit: SubmitHandler<FieldValues> = (data) => {};
 
@@ -88,7 +105,11 @@ const ProductUploadPage = () => {
             ))}
           </div>
           <hr />
-          {/* KakaoMap */}
+          {shouldRenderMap ? (
+            <KakaoMap setCustomValue={setCustomValue} latitude={latitude} longitude={longitude} />
+          ) : (
+            <p>Loading Kakao Maps...</p>
+          )}
           <Button label='상품 생성하기' />
         </form>
       </div>
