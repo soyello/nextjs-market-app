@@ -1,65 +1,39 @@
 import { AdapterSession, AdapterUser } from 'next-auth/adapters';
 import pool from './db';
-import { ResultSetHeader, RowDataPacket } from 'mysql2';
-
-interface UserRow extends RowDataPacket {
-  id: string;
-  name: string;
-  email: string;
-  image: string | null;
-  user_type: string;
-  hashed_password?: string;
-}
-
-interface SessionRow extends RowDataPacket {
-  session_token: string;
-  user_id: string;
-  expires: string;
-}
-
-interface CreateProductInput {
-  title: string;
-  description: string;
-  imageSrc: string;
-  category: string;
-  latitude: number;
-  longitude: number;
-  price: number;
-  userId: string;
-}
-
-interface Product {
-  id: string;
-  title: string;
-  description: string;
-  imageSrc: string;
-  category: string;
-  latitude: number;
-  longitude: number;
-  price: number;
-  userId: string;
-}
-
-function mapToAdapterUser(row: UserRow): AdapterUser {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    image: row.image ?? null,
-    emailVerified: null,
-    role: row.user_type,
-  };
-}
-
-function mapToAdapterSession(row: SessionRow): AdapterSession {
-  return {
-    sessionToken: row.session_token,
-    userId: row.user_id,
-    expires: new Date(row.expires),
-  };
-}
+import { ResultSetHeader } from 'mysql2';
+import { CreateProductInput, Product } from '@/helper/type';
+import { ProductRow, SessionRow, UserRow } from '@/helper/row';
+import { mapToAdapterSession, mapToAdapterUser, mapToProduct, mapToProducts } from '@/helper/mapper';
+import { buildWhereClause } from '@/helper/buildWhereClause';
 
 const MySQLAdapter = {
+  async getProducts(query: Record<string, any> = {}): Promise<Product[]> {
+    const { where, values } = buildWhereClause(query, ['category', 'latitude', 'longitude']);
+
+    const sql = `
+        SELECT
+          id,
+          title,
+          description,
+          imageSrc,
+          category,
+          latitude,
+          longitude,
+          price,
+          user_id AS userId,
+          created_at AS createdAt
+        FROM products
+        ${where}
+        ORDER BY created_at DESC
+        `;
+    try {
+      const [rows] = await pool.query<ProductRow[]>(sql, values);
+      return mapToProducts(rows);
+    } catch (error) {
+      console.error('Database query error:', { query, sql, values, error });
+      throw new Error('Error fetching products from the database');
+    }
+  },
   async createProduct({
     title,
     description,
@@ -84,17 +58,32 @@ const MySQLAdapter = {
         [title, description, imageSrc, category, latitude, longitude, price, userId]
       );
 
-      return {
-        id: result.insertId.toString(),
-        title,
-        description,
-        imageSrc,
-        category,
-        latitude,
-        longitude,
-        price,
-        userId,
-      };
+      const productId = result.insertId;
+
+      const [rows] = await pool.query<ProductRow[]>(
+        `
+        SELECT
+          id,
+          title,
+          description,
+          imageSrc,
+          category,
+          latitude,
+          longitude,
+          price,
+          user_id,
+          created_at
+        FROM products
+        WHERE id = ?
+        `,
+        [productId]
+      );
+
+      if (!rows || rows.length === 0) {
+        throw new Error('Failed to fetch the created product.');
+      }
+
+      return mapToProduct(rows[0]);
     } catch (error) {
       console.error('Error creating product:', error);
       throw new Error('An error occurred while creating the product.');
