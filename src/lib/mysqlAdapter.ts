@@ -17,6 +17,29 @@ interface SessionRow extends RowDataPacket {
   expires: string;
 }
 
+interface CreateProductInput {
+  title: string;
+  description: string;
+  imageSrc: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  price: number;
+  userId: string;
+}
+
+interface Product {
+  id: string;
+  title: string;
+  description: string;
+  imageSrc: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  price: number;
+  userId: string;
+}
+
 function mapToAdapterUser(row: UserRow): AdapterUser {
   return {
     id: row.id,
@@ -37,6 +60,46 @@ function mapToAdapterSession(row: SessionRow): AdapterSession {
 }
 
 const MySQLAdapter = {
+  async createProduct({
+    title,
+    description,
+    imageSrc,
+    category,
+    latitude,
+    longitude,
+    price,
+    userId,
+  }: CreateProductInput): Promise<Product> {
+    if (!title || !description || !imageSrc || !category || !latitude || !longitude || !price || !userId) {
+      throw new Error('All product fields are required');
+    }
+
+    try {
+      const [result] = await pool.query<ResultSetHeader>(
+        `
+        INSERT INTO products
+        (title, description, imageSrc, category, latitude, longitude, price, user_id)
+        VALUES (?,?,?,?,?,?,?,?)
+        `,
+        [title, description, imageSrc, category, latitude, longitude, price, userId]
+      );
+
+      return {
+        id: result.insertId.toString(),
+        title,
+        description,
+        imageSrc,
+        category,
+        latitude,
+        longitude,
+        price,
+        userId,
+      };
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw new Error('An error occurred while creating the product.');
+    }
+  },
   async getUserByEmailWithPassword(email: string): Promise<UserRow> {
     if (!email) {
       throw new Error('Email must be provided');
