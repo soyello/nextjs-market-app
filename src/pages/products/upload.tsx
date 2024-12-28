@@ -24,7 +24,7 @@ const ProductUploadPage = () => {
       latitude: 33.5563,
       longitude: 126.79581,
       imageSrc: '',
-      price: 1,
+      price: 10000,
     },
   });
 
