@@ -14,7 +14,23 @@ interface Params {
 }
 
 interface ProductClientProps {
-  product: Product | null;
+  product: {
+    id: string;
+    title: string;
+    description: string;
+    imageSrc: string;
+    category: string;
+    latitude: number;
+    longitude: number;
+    price: number;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+    user: {
+      id: string;
+      name: string;
+    };
+  };
   currentUser: AdapterUser | null;
 }
 
@@ -29,8 +45,8 @@ const ProductPage = ({ product, currentUser }: ProductClientProps) => {
 
   return (
     <div className='max-w-screen-lg mx-auto'>
-      <div className='flex flex-col gap-6'>
-        <ProductHead />
+      <div className='flex flex-col gap-6 mt-10'>
+        <ProductHead title={product.title} imageSrc={product.imageSrc} id={product.id} currentUser={currentUser} />
         <div className='grid grid-cols-1 mt-6 md:grid-cols-2 md:gap-10'>
           <ProductInfo />
           <div>
