@@ -1,4 +1,5 @@
 import Button from '@/components/Button';
+import { categories } from '@/components/categories/Categories';
 import ProductHead from '@/components/products/ProductHead';
 import ProductInfo from '@/components/products/ProductInfo';
 import { serializedProductWithUser } from '@/helper/serializedProduct';
@@ -29,6 +30,7 @@ interface ProductClientProps {
     user: {
       id: string;
       name: string;
+      image: string;
     };
   };
   currentUser: AdapterUser | null;
@@ -39,6 +41,8 @@ const ProductPage = ({ product, currentUser }: ProductClientProps) => {
   const KakaoMap = dynamic(() => import('../../components/KakaoMap'), {
     ssr: false,
   });
+
+  const category = categories.find((item) => item.path === product.category);
   if (!product) {
     return <div>Product not found</div>;
   }
@@ -48,7 +52,12 @@ const ProductPage = ({ product, currentUser }: ProductClientProps) => {
       <div className='flex flex-col gap-6 mt-10'>
         <ProductHead title={product.title} imageSrc={product.imageSrc} id={product.id} currentUser={currentUser} />
         <div className='grid grid-cols-1 mt-6 md:grid-cols-2 md:gap-10'>
-          <ProductInfo />
+          <ProductInfo
+            user={product.user}
+            category={category}
+            createdAt={product.createdAt}
+            description={product.description}
+          />
           <div>
             <KakaoMap detailPage latitude={product.latitude} longitude={product.longitude} />
           </div>
