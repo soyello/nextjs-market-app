@@ -36,6 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         price: Number(price),
       });
 
+      console.log('Product created successfully:', product);
+
       const serialized = serializedProduct(product);
       return res.status(201).json(serialized);
     } catch (error) {

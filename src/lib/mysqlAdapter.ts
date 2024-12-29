@@ -11,7 +11,7 @@ interface TotalItemRow extends RowDataPacket {
 }
 
 const MySQLAdapter = {
-  async getProducts(query: Record<string, any> = {}, page: number = 1, itemsPerPage: number = 10) {
+  async getProducts(query: Record<string, any> = {}, page: number = 1, itemsPerPage: number = 6) {
     const { where, values } = buildWhereClause(query, ['category', 'latitude', 'longitude']);
 
     const countSQL = `SELECT COUNT(*) as totalItems FROM products ${where}`;
@@ -19,12 +19,14 @@ const MySQLAdapter = {
     try {
       const [countResult] = await pool.query<TotalItemRow[]>(countSQL, values);
       totalItems = (countResult && countResult[0]?.totalItems) || 0;
+      console.log('Total Items:', totalItems);
     } catch (error) {
       console.error('Error fetching total itmes:', error);
       throw new Error('Error fetching total item count from the database');
     }
 
     const offset = (page - 1) * itemsPerPage;
+
     const sql = `
         SELECT
           id,
@@ -42,10 +44,11 @@ const MySQLAdapter = {
         ORDER BY created_at DESC
         LIMIT ? OFFSET ?
         `;
-    const paginatedValues = [...values, itemsPerPage, offset];
+    const paginatedValues = [...values, Number(itemsPerPage), Number(offset)];
 
     try {
       const [rows] = await pool.query<ProductRow[]>(sql, paginatedValues);
+      console.log('Fetched Rows', rows);
       return { data: mapToProducts(rows), totalItems };
     } catch (error) {
       console.error('Database query error:', { query, sql, values, error });

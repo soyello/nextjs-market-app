@@ -7,7 +7,6 @@ import Categories from '@/components/categories/Categories';
 import { PRODUCTS_PER_PAGE } from '@/constants';
 import { Product } from '@/helper/type';
 import { GetServerSideProps } from 'next';
-import { getSession } from 'next-auth/react';
 import { useState } from 'react';
 
 interface HomeProps {
@@ -51,12 +50,15 @@ export default function Home({ products, currentUser: initialUser, page }: HomeP
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const { req, res, query } = context;
+    const { query } = context;
 
-    const page = query.page ? Number(query.page) : 1;
+    const page = query.page ? Number(query.page) : 1; // 기본 페이지: 1
+    const itemsPerPage = 6; // 한 페이지당 아이템 수
+    const skip = (page - 1) * itemsPerPage;
 
+    // 현재 사용자 가져오기
     const userResponse = await fetch('http://localhost:3000/api/currentUser', {
-      headers: { cookie: req.headers.cookie || '' }, // 세션 유지를 위해 쿠키 전달
+      headers: { cookie: context.req.headers.cookie || '' },
     });
 
     if (!userResponse.ok) {
@@ -65,13 +67,15 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     const currentUser = await userResponse.json();
 
+    // 상품 데이터 가져오기
     const productResponse = await fetch(
-      `http://localhost:3000/api/products?${new URLSearchParams(query as Record<string, string>).toString()}`
+      `http://localhost:3000/api/products?page=${page}&skip=${skip}&itemsPerPage=${itemsPerPage}`
     );
 
     if (!productResponse.ok) {
-      throw new Error('Failed to fetch products: ${response.statusText}');
+      throw new Error(`Failed to fetch products: ${productResponse.statusText}`);
     }
+
     const products = await productResponse.json();
 
     return {
@@ -85,7 +89,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     console.error('Error fetching products:', error);
     return {
       props: {
-        products: [],
+        products: { data: [], totalItems: 0 },
         currentUser: null,
         page: 1,
       },

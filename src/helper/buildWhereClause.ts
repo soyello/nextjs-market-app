@@ -8,7 +8,7 @@ export function buildWhereClause(
   for (const key of allowedFilters) {
     if (query[key]) {
       if (typeof query[key] === 'object' && query[key].min !== undefined && query[key].max !== undefined) {
-        whereClauses.push(`${key} BETWEEN ? AMD ?`);
+        whereClauses.push(`${key} BETWEEN ? AND ?`);
         values.push(query[key].min, query[key].max);
       } else {
         whereClauses.push(`${key}=?`);
@@ -16,6 +16,12 @@ export function buildWhereClause(
       }
     }
   }
+
+  if (!whereClauses.length) {
+    console.log('No WHERE conditions applied, fetching all data');
+  }
+
+  const whereClause = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
   return {
     where: whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '',
