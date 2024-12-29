@@ -2,6 +2,7 @@ import Container from '@/components/Container';
 import EmptyState from '@/components/EmptyState';
 import FloatingButton from '@/components/FloatingButton';
 import ProductCard from '@/components/ProductCard';
+import Categories from '@/components/categories/Categories';
 import { GetServerSideProps } from 'next';
 import { getSession } from 'next-auth/react';
 import { useState } from 'react';
@@ -15,8 +16,9 @@ export default function Home({ products, currentUser: initialUser }: HomeProps) 
   const [currentUser, setCurrentUser] = useState(initialUser);
   return (
     <Container>
+      <Categories />
       {products.length === 0 ? (
-        <EmptyState />
+        <EmptyState showReset />
       ) : (
         <>
           <div
