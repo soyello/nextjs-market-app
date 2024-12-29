@@ -2,8 +2,14 @@ import { AdapterSession, AdapterUser } from 'next-auth/adapters';
 import pool from './db';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { CreateProductInput, Product } from '@/helper/type';
-import { ProductRow, SessionRow, UserRow } from '@/helper/row';
-import { mapToAdapterSession, mapToAdapterUser, mapToProduct, mapToProducts } from '@/helper/mapper';
+import { ProductRow, ProductWithUserRow, SessionRow, UserRow } from '@/helper/row';
+import {
+  mapProductWithUser,
+  mapToAdapterSession,
+  mapToAdapterUser,
+  mapToProduct,
+  mapToProducts,
+} from '@/helper/mapper';
 import { buildWhereClause } from '@/helper/buildWhereClause';
 
 interface TotalItemRow extends RowDataPacket {
@@ -11,6 +17,46 @@ interface TotalItemRow extends RowDataPacket {
 }
 
 const MySQLAdapter = {
+  async getProductWithUser(productId: string) {
+    try {
+      const sql = `
+      SELECT
+        p.id AS id,
+        p.title AS title,
+        p.description AS description,
+        p.imageSrc AS imageSrc,
+        p.category AS category,
+        p.latitude AS latitude,
+        p.longitude AS longitude,
+        p.price AS price,
+        p.user_id AS user_id,
+        p.created_at AS created_at,
+        u.id AS userId,
+        u.name AS userName,
+        u.email AS userEmail,
+        u.image As userImage,
+        u.user_type AS userType
+      FROM
+        products p
+      JOIN
+        users u
+      ON
+        p.user_id = u.id
+      WHERE
+        p.id = ?
+        `;
+
+      const [rows] = await pool.query<ProductWithUserRow[]>(sql, [productId]);
+
+      if (rows.length === 0) {
+        return null;
+      }
+      return mapProductWithUser(rows[0]);
+    } catch (error) {
+      console.error('Database query error:', error);
+      throw new Error('Error fetching product with user data.');
+    }
+  },
   async getProducts(query: Record<string, any> = {}, page: number = 1, itemsPerPage: number = 6) {
     const { where, values } = buildWhereClause(query, ['category', 'latitude', 'longitude']);
 
@@ -19,7 +65,6 @@ const MySQLAdapter = {
     try {
       const [countResult] = await pool.query<TotalItemRow[]>(countSQL, values);
       totalItems = (countResult && countResult[0]?.totalItems) || 0;
-      console.log('Total Items:', totalItems);
     } catch (error) {
       console.error('Error fetching total itmes:', error);
       throw new Error('Error fetching total item count from the database');
@@ -48,7 +93,6 @@ const MySQLAdapter = {
 
     try {
       const [rows] = await pool.query<ProductRow[]>(sql, paginatedValues);
-      console.log('Fetched Rows', rows);
       return { data: mapToProducts(rows), totalItems };
     } catch (error) {
       console.error('Database query error:', { query, sql, values, error });
