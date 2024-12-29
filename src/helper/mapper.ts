@@ -10,6 +10,7 @@ export function mapToAdapterUser(row: UserRow): AdapterUser {
     image: row.image ?? null,
     emailVerified: null,
     role: row.user_type,
+    favoriteIds: row.favorite_ids,
   };
 }
 

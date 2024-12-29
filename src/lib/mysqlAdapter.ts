@@ -120,9 +120,10 @@ const MySQLAdapter = {
       throw new Error('Email must be provided');
     }
     try {
-      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image, user_type FROM users WHERE email=?', [
-        email,
-      ]);
+      const [rows] = await pool.query<UserRow[]>(
+        'SELECT id, name, email, image, user_type, favorite_ids FROM users WHERE email=?',
+        [email]
+      );
 
       if (!rows[0]) return null;
 
@@ -133,46 +134,86 @@ const MySQLAdapter = {
     }
   },
   async createUser(
-    user: Omit<AdapterUser, 'id' | 'image' | 'emailVerified' | 'role'> & { password: string }
+    user: Omit<AdapterUser, 'id' | 'image' | 'emailVerified' | 'role' | 'favoriteIds'> & { password: string }
   ): Promise<AdapterUser> {
     const { name, email, password } = user;
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO users (name, email, hashed_password) VALUES (?,?,?)',
       [name, email, password]
     );
-    return { id: result.insertId.toString(), name, email, emailVerified: null, image: null, role: 'User' };
+    return {
+      id: result.insertId.toString(),
+      name,
+      email,
+      emailVerified: null,
+      image: null,
+      role: 'User',
+      favoriteIds: [],
+    };
   },
   async updateUser(user: Partial<AdapterUser> & { id: string }): Promise<AdapterUser> {
-    const { id, name, email, image, role } = user;
+    const { id, name, email, image, role, favoriteIds } = user;
 
-    if (!id) {
-      throw new Error('User Id is required for updating.');
+    const favoriteIdsJson = favoriteIds ? JSON.stringify(favoriteIds) : null;
+
+    const updateFields = [
+      { column: 'name', value: name },
+      { column: 'email', value: email },
+      { column: 'image', value: image },
+      { column: 'user_type', value: role },
+      { column: 'favorite_ids', value: favoriteIdsJson },
+    ];
+
+    const setClause = updateFields
+      .map((field) => (field.value !== undefined ? `${field.column}=?` : null))
+      .filter(Boolean)
+      .join(', ');
+
+    const values = updateFields.filter((field) => field.value !== undefined).map((field) => field.value);
+
+    if (setClause) {
+      try {
+        console.log('Executing update query:', {
+          query: `UPDATE users SET ${setClause} WHERE id =?`,
+          values: [...values, id],
+        });
+        await pool.query(`UPDATE users SET ${setClause} WHERE id = ?`, [...values, id]);
+      } catch (error) {
+        console.error('Failed to execute update query:', error);
+        throw new Error('Database update failed');
+      }
     }
 
-    try {
-      const updates = { name, email, image, role };
-      const keys = Object.keys(updates).filter((key) => updates[key as keyof typeof updates] !== undefined);
+    const [rows] = await pool.query<UserRow[]>(
+      'SELECT id, name, email, image, user_type, favorite_ids FROM users WHERE id = ?',
+      [id]
+    );
 
-      if (keys.length === 0) {
-        throw new Error('No fields to update. Provide at least on field');
-      }
-
-      const fields = keys.map((key) => `${key}=?`).join(', ');
-      const values = keys.map((key) => updates[key as keyof typeof updates]);
-
-      await pool.query(`UPDATE users SET ${fields} WHERE id = ?`, [...values, id]);
-
-      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, image, role FROM users WHERE id = ?', [id]);
-
-      if (!rows[0]) {
-        throw new Error(`User with Id: ${id} not found after update.`);
-      }
-
-      return mapToAdapterUser(rows[0]);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      throw new Error('Failed to update user.');
+    if (rows.length === 0) {
+      console.error('User not found after update:', id);
+      throw new Error(`User with id ${id} not found.`);
     }
+
+    const updatedUser = rows[0];
+
+    return {
+      id: updatedUser.id.toString(),
+      name: updatedUser.name ?? null,
+      email: updatedUser.email ?? '',
+      image: updatedUser.image ?? null,
+      role: updatedUser.user_type ?? 'User',
+      emailVerified: null,
+      favoriteIds: (() => {
+        try {
+          return typeof updatedUser.favorite_ids === 'string'
+            ? JSON.parse(updatedUser.favorite_ids)
+            : updatedUser.favorite_ids || [];
+        } catch (error) {
+          console.error('Failed to parse favorite_ids:', error, updatedUser.favorite_ids);
+          return [];
+        }
+      })(),
+    };
   },
   async deleteUser(id: string): Promise<void> {
     await pool.query('DELETE FROM users WHERE id =?', [id]);

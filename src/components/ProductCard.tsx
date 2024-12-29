@@ -8,9 +8,10 @@ import HeartButton from './HeartButton';
 interface ProductCardProps {
   data: Product;
   currentUser?: AdapterUser | null;
+  setCurrentUser: (user: AdapterUser | null) => void;
 }
 
-const ProductCard = ({ data, currentUser }: ProductCardProps) => {
+const ProductCard = ({ data, currentUser, setCurrentUser }: ProductCardProps) => {
   const router = useRouter();
   return (
     <div onClick={() => router.push(`/products/${data.id}`)} className='col-span-1 cursor-pointer group'>
@@ -24,7 +25,7 @@ const ProductCard = ({ data, currentUser }: ProductCardProps) => {
             alt='product'
           />
           <div className='absolute top-3 right-4'>
-            <HeartButton productId={data.id} currentUser={currentUser} />
+            <HeartButton productId={data.id} currentUser={currentUser} setCurrentUser={setCurrentUser} />
           </div>
         </div>
         <div className='text-lg font-semibold'>{data.title}</div>
