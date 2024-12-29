@@ -5,12 +5,15 @@ export interface ProductsParams {
   latitude?: number;
   longitude?: number;
   category?: string;
+  page?: number;
+  skip?: number;
 }
 
 export default async function getProducts(params: ProductsParams) {
   try {
-    const { latitude, longitude, category } = params;
-    let query: any = {};
+    const { latitude, longitude, category, page = 1, skip } = params;
+    const itemsPerPage = 6;
+    let query: Record<string, any> = {};
     if (category) {
       query.category = category;
     }
@@ -27,7 +30,11 @@ export default async function getProducts(params: ProductsParams) {
       };
     }
     try {
-      return await MySQLAdapter.getProducts(query);
+      const result = await MySQLAdapter.getProducts(query, page, skip || itemsPerPage);
+      if (!result || !result.data || typeof result.totalItems !== 'number') {
+        return { data: [], totalItems: 0 };
+      }
+      return result;
     } catch (error) {
       console.error('Error fetching products:', error);
       throw new Error('Failed to fetch products');

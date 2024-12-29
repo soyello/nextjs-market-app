@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@lucasmogari/react-pagination": "^1.2.0",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "dayjs": "^1.11.13",

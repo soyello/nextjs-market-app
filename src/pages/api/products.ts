@@ -44,10 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } else if (req.method === 'GET') {
     const params = req.query;
+    console.log('Received query params:', params);
     try {
       const products = await getProducts(params);
-      const serialized = serializedProducts(products);
-      return res.status(200).json(serialized);
+      const serialized = serializedProducts(products.data);
+      return res.status(200).json({ data: serialized, totalItems: products.totalItems });
     } catch (error) {
       console.error('Error fetching products:', error);
       return res.status(500).json({ error: 'Internal Server Error' });

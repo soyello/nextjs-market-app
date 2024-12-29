@@ -1,23 +1,27 @@
 import Container from '@/components/Container';
 import EmptyState from '@/components/EmptyState';
 import FloatingButton from '@/components/FloatingButton';
+import Pagination from '@/components/Pagination';
 import ProductCard from '@/components/ProductCard';
 import Categories from '@/components/categories/Categories';
+import { PRODUCTS_PER_PAGE } from '@/constants';
+import { Product } from '@/helper/type';
 import { GetServerSideProps } from 'next';
 import { getSession } from 'next-auth/react';
 import { useState } from 'react';
 
 interface HomeProps {
-  products: any[];
+  products: { data: Product[]; totalItems: number };
   currentUser: any | null;
+  page: number;
 }
 
-export default function Home({ products, currentUser: initialUser }: HomeProps) {
+export default function Home({ products, currentUser: initialUser, page }: HomeProps) {
   const [currentUser, setCurrentUser] = useState(initialUser);
   return (
     <Container>
       <Categories />
-      {products.length === 0 ? (
+      {products.data.length === 0 ? (
         <EmptyState showReset />
       ) : (
         <>
@@ -33,12 +37,13 @@ export default function Home({ products, currentUser: initialUser }: HomeProps) 
             2xl:grid-cols-6
             '
           >
-            {products.map((product) => (
+            {products.data.map((product) => (
               <ProductCard currentUser={currentUser} key={product.id} data={product} setCurrentUser={setCurrentUser} />
             ))}
           </div>
         </>
       )}
+      <Pagination page={page} totalItems={products.totalItems} perPage={PRODUCTS_PER_PAGE} />
       <FloatingButton href='/products/upload'>+</FloatingButton>
     </Container>
   );
@@ -46,10 +51,12 @@ export default function Home({ products, currentUser: initialUser }: HomeProps) 
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const session = await getSession(context);
+    const { req, res, query } = context;
+
+    const page = query.page ? Number(query.page) : 1;
 
     const userResponse = await fetch('http://localhost:3000/api/currentUser', {
-      headers: { cookie: context.req.headers.cookie || '' }, // 세션 유지를 위해 쿠키 전달
+      headers: { cookie: req.headers.cookie || '' }, // 세션 유지를 위해 쿠키 전달
     });
 
     if (!userResponse.ok) {
@@ -58,21 +65,20 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
 
     const currentUser = await userResponse.json();
 
-    const { query } = context;
-
-    const response = await fetch(
+    const productResponse = await fetch(
       `http://localhost:3000/api/products?${new URLSearchParams(query as Record<string, string>).toString()}`
     );
 
-    if (!response.ok) {
+    if (!productResponse.ok) {
       throw new Error('Failed to fetch products: ${response.statusText}');
     }
-    const products = await response.json();
+    const products = await productResponse.json();
 
     return {
       props: {
         products,
         currentUser,
+        page,
       },
     };
   } catch (error) {
@@ -81,6 +87,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       props: {
         products: [],
         currentUser: null,
+        page: 1,
       },
     };
   }
