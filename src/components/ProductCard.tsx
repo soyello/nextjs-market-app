@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/router';
 import React from 'react';
 import HeartButton from './HeartButton';
+import dayjs from 'dayjs';
+import { fromNow } from '@/helper/dayjs';
 
 interface ProductCardProps {
   data: Product;
@@ -30,12 +32,12 @@ const ProductCard = ({ data, currentUser, setCurrentUser }: ProductCardProps) =>
         </div>
         <div className='text-lg font-semibold'>{data.title}</div>
         <div className='font-light text-neutral-500'>{data.category}</div>
-        <div>
+        <div className='flex flex-row itmes-center justify-between gap-1'>
           <div>
             {data.price}
             <span className='font-light'>원</span>
           </div>
-          <div></div>
+          <div>{fromNow(data.createdAt)}</div>
         </div>
       </div>
     </div>
