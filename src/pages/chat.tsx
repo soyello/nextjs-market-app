@@ -1,8 +1,10 @@
+import { TUserWithChat } from '@/helper/type';
 import getCurrentUser from '@/lib/getCurrentUser';
 import axios from 'axios';
 import { GetServerSideProps } from 'next';
 import { AdapterUser } from 'next-auth/adapters';
 import { useEffect, useState } from 'react';
+import useSWR from 'swr';
 
 interface ChatClientProps {
   currentUser?: AdapterUser | null;
@@ -43,22 +45,27 @@ const ChatPage = ({ currentUser }: ChatClientProps) => {
 
   const [layout, setLayout] = useState(false);
 
-  useEffect(() => {
-    axios
-      .get(`/api/chat`)
-      .then((res) => {
-        console.log('Chat data:', res.data);
-      })
-      .catch((err) => {
-        console.error('Failed to fetch chat data:', err);
-      });
-  }, []);
+  const fetcher = (url: string) => axios.get(url).then((res) => res.data);
+  const { data: users, error } = useSWR('/api/chat', fetcher, {
+    refreshInterval: 1000,
+  });
+
+  const isLoading = !users && !error;
+
+  const currentUserWithChat = users?.find((user: TUserWithChat) => user.email === currentUser?.email);
+
+  if (isLoading) {
+    return <p>Loading...</p>;
+  }
+  if (error) {
+    return <p>Failed to load data.</p>;
+  }
 
   return (
     <main>
       <div className='grid grid-cols-[1fr] md:grid-cols-[300px_1fr]'>
-        <section className={`md:${layout ? 'hidden' : 'flex'}`}>Contact Component</section>
-        <section className={`md:${layout ? 'hidden' : 'flex'}`}>Chat Component</section>
+        <section className={`${layout ? 'hidden' : 'md:flex'}`}>Contact Component</section>
+        <section className={`${layout ? 'md:hidden' : 'flex'}`}>Chat Component</section>
       </div>
     </main>
   );
