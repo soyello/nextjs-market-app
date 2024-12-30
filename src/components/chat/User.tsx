@@ -48,7 +48,9 @@ const User = ({ user, currentUserId }: UserProps) => {
         )}
         {latestMessage && latestMessage.image && <p className='text-xs font-medium text-gray-600'>[이미지]</p>}
       </div>
-      <div>{latestMessage && <p>{fromNow(latestMessage.createdAt)}</p>}</div>
+      <div className='flex justify-end text-xs text-gray-500'>
+        {latestMessage && <p>{fromNow(latestMessage.createdAt)}</p>}
+      </div>
     </div>
   );
 };
