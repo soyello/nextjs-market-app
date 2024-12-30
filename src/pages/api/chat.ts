@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const body = req.body;
 
-    if (!body.senderId || !body.receiverId || !body.text) {
+    if (!body.senderId || !body.receiverId || (!body.text && !body.image)) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 

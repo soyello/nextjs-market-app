@@ -23,6 +23,9 @@ const NavItem = ({ mobile }: { mobile?: boolean }) => {
       <li className='py-2 text-center border-b-2 border-basic cursor-pointer'>
         <Link href='/user'>User</Link>
       </li>
+      <li className='py-2 text-center border-b-2 border-basic cursor-pointer'>
+        <Link href='/chat'>Chat</Link>
+      </li>
 
       {session?.user ? (
         <li className='py-2 text-center border-b-2 border-basic cursor-pointer'>
