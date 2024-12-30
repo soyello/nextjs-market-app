@@ -1,7 +1,8 @@
 import getCurrentUser from '@/lib/getCurrentUser';
+import axios from 'axios';
 import { GetServerSideProps } from 'next';
 import { AdapterUser } from 'next-auth/adapters';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface ChatClientProps {
   currentUser?: AdapterUser | null;
@@ -41,6 +42,17 @@ const ChatPage = ({ currentUser }: ChatClientProps) => {
   });
 
   const [layout, setLayout] = useState(false);
+
+  useEffect(() => {
+    axios
+      .get(`/api/chat`)
+      .then((res) => {
+        console.log('Chat data:', res.data);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch chat data:', err);
+      });
+  }, []);
 
   return (
     <main>
