@@ -39,25 +39,43 @@ export interface ProductUserRow extends RowDataPacket {
 
 export type ProductWithUserRow = ProductRow & ProductUserRow;
 
+export interface Message {
+  messageId: string;
+  text: string | null;
+  image: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  sender: {
+    id: string | null;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  };
+  receiver: {
+    id: string | null;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+  };
+}
+
+export interface Conversation {
+  conversationId: number;
+  conversationName: string | null;
+  conversationCreatedAt: string;
+  messages: Message[]; // 메시지 배열
+  users: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  }[]; // 참여자 배열
+}
+
 export interface UserConversationRow extends RowDataPacket {
   userId: string;
   userName: string;
   userEmail: string;
-  userImage: string;
-  conversationId: string | null;
-  conversationName: string | null;
-  conversationCreatedAt: string | null;
-  messageId: string | null;
-  messageText: string | null;
-  messageImage: string | null;
-  messageCreatedAt: string | null;
-  messageUpdatedAt: string | null;
-  senderId: string | null;
-  senderName: string | null;
-  senderEmail: string | null;
-  senderImage: string | null;
-  receiverId: string | null;
-  receiverName: string | null;
-  receiverEmail: string | null;
-  receiverImage: string | null;
+  userImage: string | null;
+  conversations: Conversation[] | null; // 파싱된 JSON 객체 배열
 }

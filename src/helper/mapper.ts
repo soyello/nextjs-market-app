@@ -70,29 +70,10 @@ export function mapRowToUserConversation(row: UserConversationRow) {
     name: row.userName,
     email: row.userEmail,
     image: row.userImage,
-    conversationId: row.conversationId,
-    conversationName: row.conversationName,
-    conversationCreatedAt: row.conversationCreatedAt,
-    messageId: row.messageId,
-    messageText: row.messageText,
-    messageImage: row.messageImage,
-    messageCreatedAt: row.messageCreatedAt,
-    messageUpdatedAt: row.messageUpdatedAt,
-    sender: row.senderId
-      ? {
-          id: row.senderId,
-          name: row.senderName,
-          email: row.senderEmail,
-          image: row.senderImage,
-        }
-      : null,
-    receiver: row.receiverId
-      ? {
-          id: row.receiverId,
-          name: row.receiverName,
-          email: row.receiverEmail,
-          image: row.receiverImage,
-        }
-      : null,
+    conversations: Array.isArray(row.conversations)
+      ? row.conversations // 이미 배열인 경우 그대로 사용
+      : typeof row.conversations === 'string'
+      ? JSON.parse(row.conversations) // JSON 문자열인 경우 파싱
+      : [], // null 또는 다른 형식인 경우 빈 배열 반환
   };
 }

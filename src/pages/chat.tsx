@@ -49,7 +49,7 @@ const ChatPage = ({ currentUser }: ChatClientProps) => {
 
   const fetcher = (url: string) => axios.get(url).then((res) => res.data);
   const { data: users, error } = useSWR('/api/chat', fetcher, {
-    refreshInterval: 1000,
+    refreshInterval: 10000,
   });
 
   const isLoading = !users && !error;

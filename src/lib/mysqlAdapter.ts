@@ -17,43 +17,127 @@ interface TotalItemRow extends RowDataPacket {
   totalItems: number;
 }
 
+interface CreateMessageInput {
+  text: string;
+  image?: string;
+  senderId: string;
+  receiverId: string;
+  conversationId: number;
+}
+
 const MySQLAdapter = {
+  async findOrCreateConversation(senderId: string, receiverId: string): Promise<number> {
+    const conversationSql = `
+      SELECT id FROM conversations 
+      WHERE (sender_id = ? AND receiver_id = ?) 
+         OR (sender_id = ? AND receiver_id = ?)
+      LIMIT 1;
+    `;
+
+    const [conversationRows] = await pool.query<RowDataPacket[]>(conversationSql, [
+      senderId,
+      receiverId,
+      receiverId,
+      senderId,
+    ]);
+
+    if (conversationRows.length > 0) {
+      return conversationRows[0].id;
+    }
+
+    const newConversationSql = `
+      INSERT INTO conversations (sender_id, receiver_id) VALUES (?, ?);
+    `;
+
+    const [newConversationResult] = await pool.query<ResultSetHeader>(newConversationSql, [senderId, receiverId]);
+
+    return newConversationResult.insertId;
+  },
+
+  async createMessage({ text, image, senderId, receiverId, conversationId }: CreateMessageInput): Promise<number> {
+    const messageSql = `
+      INSERT INTO messages (text, image, sender_id, receiver_id, conversation_id, created_at)
+      VALUES (?, ?, ?, ?, ?, NOW());
+    `;
+
+    const [messageResult] = await pool.query<ResultSetHeader>(messageSql, [
+      text,
+      image || null,
+      senderId,
+      receiverId,
+      conversationId,
+    ]);
+
+    return messageResult.insertId;
+  },
+
   async getUsersWithConversations() {
     try {
       const sql = `
-        SELECT
-          u.id AS userId,
-          u.name AS userName,
-          u.email AS userEmail,
-          u.image AS userImage,
-          c.id AS conversationId,
-          c.name AS conversationName,
-          c.created_at AS conversationCreatedAt,
-          m.id AS messageId,
-          m.text AS messageText,
-          m.image AS messageImage,
-          m.created_at AS messageCreatedAt,
-          m.updated_at AS messageUpdatedAt,
-          sender.id AS senderId,
-          sender.name AS senderName,
-          sender.email AS senderEmail,
-          sender.image AS senderImage,
-          receiver.id AS receiverId,
-          receiver.name AS receiverName,
-          receiver.email AS receiverEmail,
-          receiver.image AS receiverImage
-        FROM
-          users u
-        LEFT JOIN
-          conversations c ON u.id = c.sender_id OR u.id = c.receiver_id
-        LEFT JOIN
-          messages m ON c.id = m.conversation_id
-        LEFT JOIN
-          users sender ON c.sender_id = sender.id
-        LEFT JOIN
-          users receiver ON c.receiver_id = receiver.id
-        ORDER BY
-          m.created_at ASC;
+      SELECT
+    u.id AS userId,
+    u.name AS userName,
+    u.email AS userEmail,
+    u.image AS userImage,
+    JSON_ARRAYAGG(
+      JSON_OBJECT(
+        'conversationId', c.id,
+        'conversationName', c.name,
+        'conversationCreatedAt', c.created_at,
+        'messages', IF(
+          c.id IS NOT NULL,
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'messageId', m.id,
+                'text', m.text,
+                'image', m.image,
+                'createdAt', m.created_at,
+                'updatedAt', m.updated_at,
+                'sender', JSON_OBJECT(
+                  'id', sender.id,
+                  'name', sender.name,
+                  'email', sender.email,
+                  'image', sender.image
+                ),
+                'receiver', JSON_OBJECT(
+                  'id', receiver.id,
+                  'name', receiver.name,
+                  'email', receiver.email,
+                  'image', receiver.image
+                )
+              )
+            )
+            FROM messages m
+            LEFT JOIN users sender ON m.sender_id = sender.id
+            LEFT JOIN users receiver ON m.receiver_id = receiver.id
+            WHERE m.conversation_id = c.id
+          ),
+          NULL
+        ),
+        'users', IF(
+          c.id IS NOT NULL,
+          (
+            SELECT JSON_ARRAYAGG(
+              JSON_OBJECT(
+                'id', p.id,
+                'name', p.name,
+                'email', p.email,
+                'image', p.image
+              )
+            )
+            FROM users p
+            WHERE p.id = c.sender_id OR p.id = c.receiver_id
+          ),
+          NULL
+        )
+      )
+    ) AS conversations
+FROM
+    users u
+LEFT JOIN conversations c ON u.id = c.sender_id OR u.id = c.receiver_id
+GROUP BY
+    u.id;
           `;
       const [rows] = await pool.query<UserConversationRow[]>(sql);
 
