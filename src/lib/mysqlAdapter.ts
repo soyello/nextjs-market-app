@@ -25,7 +25,9 @@ const MySQLAdapter = {
       throw new Error('Failed fetch user.');
     }
   },
-  async createUser(user: Omit<AdapterUser, 'id' | 'emailVerified' | 'role'>): Promise<AdapterUser> {
+  async createUser(
+    user: Omit<AdapterUser, 'id' | 'emailVerified' | 'role' | 'createdAt' | 'updatedAt'>
+  ): Promise<AdapterUser> {
     const { name, email, hashedPassword } = user;
     const [result] = await pool.query<ResultSetHeader>(
       'INSERT INTO users (name, email, hashed_password) VALUES (?,?,?)',
@@ -39,6 +41,8 @@ const MySQLAdapter = {
       hashedPassword,
       role: 'User',
       emailVerified: null,
+      createdAt: new Date(),
+      updatedAt: null,
     };
   },
   async updateUser(user: Nullable<AdapterUser> & { email: string }): Promise<AdapterUser> {
