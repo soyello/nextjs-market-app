@@ -5,11 +5,25 @@ import ImageUpload from '@/components/ImageUpload';
 import Input from '@/components/Input';
 import { categories } from '@/components/categories/Categories';
 import CategoryInput from '@/components/categories/CategoryInput';
-import React, { useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
+import { KakaoContext } from '../_app';
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/router';
+import axios from 'axios';
 
 const ProductUploadPage = () => {
+  const router = useRouter();
+  const { isKakaoLoaded } = useContext(KakaoContext);
+
+  const [shouldRenderMap, setShouldRenderMap] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isKakaoLoaded) {
+      setShouldRenderMap(true);
+    }
+  }, [isKakaoLoaded]);
 
   const {
     register,
@@ -23,15 +37,34 @@ const ProductUploadPage = () => {
       title: '',
       description: '',
       category: '',
-      latitude: 33.5563,
-      longitude: 126.79581,
+      latitude: 37.5665,
+      longitude: 126.978,
       imageSrc: '',
       price: 10000,
     },
   });
   const imageSrc = watch('imageSrc');
   const category = watch('category');
-  const onSubmit: SubmitHandler<FieldValues> = (data) => {};
+
+  const latitude = watch('latitude');
+  const longitude = watch('longitude');
+
+  const KakaoMap = dynamic(() => import('../../components/KakaoMap'), { ssr: false });
+
+  const onSubmit: SubmitHandler<FieldValues> = (data) => {
+    setIsLoading(true);
+    axios
+      .post('/api/products', data)
+      .then((response) => {
+        router.push(`/products/${response.data.id}`);
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
   const setCustomValue = (id: string, value: any) => {
     setValue(id, value);
   };
@@ -75,7 +108,11 @@ const ProductUploadPage = () => {
             ))}
           </div>
           <hr />
-          KakaoMap
+          {shouldRenderMap ? (
+            <KakaoMap setCustomValue={setCustomValue} latitude={latitude} longitude={longitude} />
+          ) : (
+            <p>Loading kakao Maps</p>
+          )}
           <Button label='상품 생성하기' />
         </form>
       </div>
