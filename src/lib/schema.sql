@@ -4,6 +4,10 @@ CREATE TABLE users(
   email VARCHAR(255) UNIQUE NOT NULL,
   email_verified DATETIME,
   image VARCHAR(255) NULL,
+  hashed_password VARCHAR(255) NOT NULL,
+  user_type ENUM('User','Admin') DEFAULT 'User',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE sessions(

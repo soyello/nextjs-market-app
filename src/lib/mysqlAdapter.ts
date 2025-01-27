@@ -14,9 +14,10 @@ const MySQLAdapter = {
       throw new Error('Email must be provided.');
     }
     try {
-      const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, hashed_password FROM users WHERE email=?', [
-        email,
-      ]);
+      const [rows] = await pool.query<UserRow[]>(
+        'SELECT id, name, email, user_type, created_at, updated_at, hashed_password FROM users WHERE email=?',
+        [email]
+      );
 
       return rows[0] ? mapToAdapterUser(rows[0]) : null;
     } catch (error) {
@@ -30,15 +31,23 @@ const MySQLAdapter = {
       'INSERT INTO users (name, email, hashed_password) VALUES (?,?,?)',
       [name, email, hashedPassword]
     );
-    return { id: result.insertId.toString(), name, email, image: null, hashedPassword, emailVerified: null };
+    return {
+      id: result.insertId.toString(),
+      name,
+      email,
+      image: null,
+      hashedPassword,
+      role: 'User',
+      emailVerified: null,
+    };
   },
   async updateUser(user: Nullable<AdapterUser> & { email: string }): Promise<AdapterUser> {
-    const { name, email, image } = user;
+    const { name, email, image, role } = user;
     if (!email) {
       throw new Error('User Email is required for updating');
     }
     try {
-      const updates = { name, image };
+      const updates = { name, image, user_type: role };
       const keys = Object.keys(updates).filter((key) => updates[key as keyof typeof updates] !== undefined);
       if (keys.length === 0) {
         throw new Error('No fields to update. Provide at least one field.');
@@ -49,7 +58,7 @@ const MySQLAdapter = {
       await pool.query(`UPDATE users SET ${fields} WHERE email=?`, [...values, email]);
 
       const [rows] = await pool.query<UserRow[]>(
-        'SELECT id, name, email, image, created_at, updated_at FROM users WHERE email=?',
+        'SELECT id, name, email, image, user_type, created_at, updated_at FROM users WHERE email=?',
         [email]
       );
       if (!rows[0]) {
@@ -77,6 +86,7 @@ const MySQLAdapter = {
           u.id AS id,
           u.name AS name,
           u.image AS image,
+          u.user_type AS user_type,
           u.created_at AS created_at,
           u.updated_at AS updated_at,
           u.email_verified AS email_verified
