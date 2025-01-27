@@ -1,9 +1,8 @@
-import { RowDataPacket } from 'mysql2';
-import { NextAuthOptions, User } from 'next-auth';
+import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import pool from '../../../lib/db';
 import NextAuth from 'next-auth/next';
-import { UserRow } from '@/helper/row';
+import bcrypt from 'bcryptjs';
+import MySQLAdapter from '@/lib/mysqlAdapter';
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -15,30 +14,25 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const hardcodedUser = {
-          id: '곶감',
-          name: '정재연',
-          email: 'hello@good.com',
-          role: 'User',
-          hashedPassword: '12345',
-        };
-        if (!credentials) {
+        if (!credentials?.email || !credentials?.password) {
           console.warn('credentials must be required.');
           return null;
         }
-        if (credentials.email === hardcodedUser.email && credentials.password === hardcodedUser.hashedPassword) {
-          return hardcodedUser as User;
+
+        const user = await MySQLAdapter.getUser(credentials.email);
+
+        if (!user) {
+          console.log('회원가입 이력이 없습니다.');
+          throw new Error('No user found with this email.');
         }
-        const [rows] = await pool.query<UserRow[]>('SELECT id, name, email, user_type FROM users WHERE email = ?', [
-          credentials.email,
-        ]);
-        const user = rows[0];
-        if (user && user.hashed_password === credentials.password) {
+        const isCorrectPassword = await bcrypt.compare(credentials.password, user?.hashedPassword!);
+
+        if (isCorrectPassword) {
           return {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.user_type,
+            role: user.role,
           };
         }
         return null;
