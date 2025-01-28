@@ -8,7 +8,6 @@ export default async function getCurrentUser(email: string): Promise<AdapterUser
       return null;
     }
     const currentUser = await MySQLAdapter.getUser(email);
-    console.log('currentUser', currentUser);
 
     if (!currentUser) {
       console.warn(`No user found with email: ${email}`);

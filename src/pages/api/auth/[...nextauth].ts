@@ -25,19 +25,23 @@ export const authOptions: NextAuthOptions = {
           console.log('회원가입 이력이 없습니다.');
           throw new Error('No user found with this email.');
         }
-        const isCorrectPassword = await bcrypt.compare(credentials.password, user?.hashedPassword!);
-
-        if (isCorrectPassword) {
-          return {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt,
-          };
+        if (user.hashedPassword) {
+          const isCorrectPassword = await bcrypt.compare(credentials.password, user.hashedPassword);
+          if (isCorrectPassword) {
+            return {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              createdAt: user.createdAt,
+              updatedAt: user.updatedAt,
+            };
+          } else {
+            throw new Error('Incorrent password.');
+          }
+        } else {
+          throw new Error('Hashed Password is undefined.');
         }
-        return null;
       },
     }),
   ],
