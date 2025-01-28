@@ -3,6 +3,8 @@ import Container from '@/components/Container';
 import Heading from '@/components/Heading';
 import ImageUpload from '@/components/ImageUpload';
 import Input from '@/components/Input';
+import { categories } from '@/components/categories/Categories';
+import CategoryInput from '@/components/categories/CategoryInput';
 import React, { useState } from 'react';
 import { FieldValues, SubmitHandler, useForm } from 'react-hook-form';
 
@@ -64,7 +66,18 @@ const ProductUploadPage = () => {
             required
           />
           <hr />
-          <div className='grid gird-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto'>category</div>
+          <div className='grid gird-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto'>
+            {categories.map((item) => (
+              <div key={item.label} className='col-span-1'>
+                <CategoryInput
+                  onClick={() => setCustomValue('category', item.path)}
+                  selected={category === item.path}
+                  label={item.label}
+                  icon={item.icon}
+                />
+              </div>
+            ))}
+          </div>
           <hr />
           KakaoMap
           <Button label='상품 생성하기' />
